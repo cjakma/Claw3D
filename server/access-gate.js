@@ -71,12 +71,25 @@ function createAccessGate(options) {
   const getAuthState = (req) => {
     if (!enabled) return { authorized: true, limited: false };
     const ip = req.socket?.remoteAddress || "unknown";
+
     const cookieHeader = req.headers?.cookie;
     const cookies = parseCookies(cookieHeader);
-    const authorized = safeCompare(cookies[cookieName] || "", token);
+    let providedToken = cookies[cookieName] || "";
+    let usedUrlToken = false;
+
+    try {
+      const parsedUrl = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+      const urlToken = parsedUrl.searchParams.get("token");
+      if (urlToken) {
+        providedToken = urlToken;
+        usedUrlToken = true;
+      }
+    } catch (e) { }
+
+    const authorized = safeCompare(providedToken, token);
     if (authorized) {
       rateLimiter.reset(ip);
-      return { authorized: true, limited: false };
+      return { authorized: true, limited: false, usedUrlToken, providedToken };
     }
     if (rateLimiter.isLimited(ip)) {
       return { authorized: false, limited: true };
@@ -88,30 +101,46 @@ function createAccessGate(options) {
   const handleHttp = (req, res) => {
     if (!enabled) return false;
     const auth = getAuthState(req);
-    if (!auth.authorized) {
-      const statusCode = auth.limited ? 429 : 401;
-      if (String(req.url || "/").startsWith("/api/")) {
-        res.statusCode = statusCode;
-        res.setHeader("Content-Type", "application/json");
-        res.end(
-          JSON.stringify({
-            error: auth.limited
-              ? "Too many failed studio access attempts. Wait a minute and retry."
-              : "Studio access token required. Send the configured Studio access cookie and retry.",
-          })
+
+    if (auth.authorized) {
+      if (auth.usedUrlToken) {
+        res.setHeader(
+          "Set-Cookie",
+          `${cookieName}=${auth.providedToken}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax`
         );
-      } else {
-        res.statusCode = statusCode;
-        res.setHeader("Content-Type", "text/plain");
-        res.end(
-          auth.limited
-            ? "Too many failed studio access attempts. Wait a minute and retry."
-            : "Studio access token required. Set the studio_access cookie to access this page."
-        );
+        try {
+          const parsedUrl = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+          parsedUrl.searchParams.delete("token");
+          res.statusCode = 302;
+          res.setHeader("Location", parsedUrl.pathname + parsedUrl.search);
+          res.end();
+          return true;
+        } catch (e) { }
       }
-      return true;
+      return false;
     }
-    return false;
+
+    const statusCode = auth.limited ? 429 : 401;
+    if (String(req.url || "/").startsWith("/api/")) {
+      res.statusCode = statusCode;
+      res.setHeader("Content-Type", "application/json");
+      res.end(
+        JSON.stringify({
+          error: auth.limited
+            ? "Too many failed studio access attempts. Wait a minute and retry."
+            : "Studio access token required. Send the configured Studio access cookie and retry.",
+        })
+      );
+    } else {
+      res.statusCode = statusCode;
+      res.setHeader("Content-Type", "text/plain");
+      res.end(
+        auth.limited
+          ? "Too many failed studio access attempts. Wait a minute and retry."
+          : "Studio access token required. Set the studio_access cookie to access this page."
+      );
+    }
+    return true;
   };
 
   const allowUpgrade = (req) => {

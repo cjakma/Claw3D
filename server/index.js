@@ -2,6 +2,30 @@ const http = require("node:http");
 const https = require("node:https");
 const next = require("next");
 
+const fs = require("node:fs");
+const path = require("node:path");
+
+// Load .env and .env.local manually since 'node server/index.js' does not load Next's env resolver automatically before accessing process.env.
+['.env', '.env.local'].forEach((file) => {
+  try {
+    const envPath = path.resolve(process.cwd(), file);
+    if (!fs.existsSync(envPath)) return;
+    const content = fs.readFileSync(envPath, "utf8");
+    content.split("\n").forEach((line) => {
+      const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+      if (match && process.env[match[1]] === undefined) {
+        let val = (match[2] || "").trim();
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+          val = val.slice(1, -1);
+        }
+        process.env[match[1]] = val;
+      }
+    });
+  } catch (e) {
+    // Ignore errors reading env files
+  }
+});
+
 const { createAccessGate } = require("./access-gate");
 const { createGatewayProxy } = require("./gateway-proxy");
 const { assertPublicHostAllowed, resolveHosts } = require("./network-policy");
@@ -117,13 +141,13 @@ async function main() {
   const createServer = () =>
     useHttps
       ? https.createServer(httpsCert, (req, res) => {
-          if (accessGate.handleHttp(req, res)) return;
-          handle(req, res);
-        })
+        if (accessGate.handleHttp(req, res)) return;
+        handle(req, res);
+      })
       : http.createServer((req, res) => {
-          if (accessGate.handleHttp(req, res)) return;
-          handle(req, res);
-        });
+        if (accessGate.handleHttp(req, res)) return;
+        handle(req, res);
+      });
 
   const servers = hostnames.map(() => createServer());
 
@@ -177,6 +201,20 @@ async function main() {
   const protocol = useHttps ? "https" : "http";
   const browserUrl = `${protocol}://${hostForBrowser}:${port}`;
   console.info(`Open in browser: ${browserUrl}`);
+
+  if (hostname === "0.0.0.0" || hostname === "::") {
+    const os = require("node:os");
+    let networkIp = null;
+    for (const iface of Object.values(os.networkInterfaces())) {
+      for (const info of iface) {
+        if (!info.internal && info.family === "IPv4") networkIp = info.address;
+      }
+    }
+    if (networkIp) {
+      console.info(`Network address: ${protocol}://${networkIp}:${port}`);
+    }
+  }
+
   if (useHttps) {
     console.info("HTTPS mode: self-signed cert in use. You may need to accept a browser security warning once.");
     console.info(`Spotify redirect URI: ${browserUrl}/office`);

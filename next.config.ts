@@ -16,7 +16,6 @@ const securityHeaders = [
       "media-src 'self' blob: data: http: https:",
       "worker-src 'self' blob:",
       "object-src 'none'",
-      "upgrade-insecure-requests",
     ].join("; "),
   },
   {
@@ -49,6 +48,10 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: [
+    "claw3d.pm-oci.duckdns.org",
+    "openclaw.pm-oci.duckdns.org",
+  ],
   async headers() {
     return [
       {
