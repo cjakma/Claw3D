@@ -1,4 +1,4 @@
-# 2026-05-11 OpenClaw / Claw3D Deploy Chat History
+﻿# 2026-05-11 OpenClaw / Claw3D Deploy Chat History
 
 > Note: This file summarizes the chat and actions from the deployment/debugging thread.  
 > Sensitive values such as private key paths, passphrases, access tokens, and gateway tokens are intentionally redacted.
@@ -26,7 +26,7 @@ Observed warning:
 
 ```text
 WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!
-Host key for pm-oci.duckdns.org has changed
+Host key for <WEB_SERVER_DOMAIN> has changed
 ```
 
 The new ED25519 fingerprint shown by SSH was:
@@ -192,21 +192,21 @@ Portainer was bound to:
 
 NPM proxy hosts existed for:
 
-- `pm-oci.duckdns.org`
-- `portainer.pm-oci.duckdns.org`
-- `openclaw.pm-oci.duckdns.org`
-- `claw3d.pm-oci.duckdns.org`
+- `<WEB_SERVER_DOMAIN>`
+- `portainer.<WEB_SERVER_DOMAIN>`
+- `<WEB_SERVER_OPENCLAW_DOMAIN>`
+- `<WEB_SERVER_CLAW3D_DOMAIN>`
 
 The user clarified:
 
-- `pm-oci.duckdns.org` should continue pointing to Nginx Proxy Manager.
-- `openclaw.pm-oci.duckdns.org` should replace direct `:18789`.
-- `claw3d.pm-oci.duckdns.org` should replace direct `:3000`.
+- `<WEB_SERVER_DOMAIN>` should continue pointing to Nginx Proxy Manager.
+- `<WEB_SERVER_OPENCLAW_DOMAIN>` should replace direct `:18789`.
+- `<WEB_SERVER_CLAW3D_DOMAIN>` should replace direct `:3000`.
 
 The root domain was confirmed/restored to NPM:
 
 ```text
-pm-oci.duckdns.org -> nginxproxymanager:81
+<WEB_SERVER_DOMAIN> -> nginxproxymanager:81
 ```
 
 ## 10. Docker Host Gateway Investigation
@@ -240,8 +240,8 @@ Use Docker host gateway:
 NPM upstream targets:
 
 ```text
-openclaw.pm-oci.duckdns.org -> http://172.18.0.1:18789
-claw3d.pm-oci.duckdns.org   -> http://172.18.0.1:3000
+<WEB_SERVER_OPENCLAW_DOMAIN> -> http://172.18.0.1:18789
+<WEB_SERVER_CLAW3D_DOMAIN>   -> http://172.18.0.1:3000
 ```
 
 ## 11. UFW and Port Exposure Discussion
@@ -329,7 +329,7 @@ origin not allowed (open the Control UI from the gateway host or allow it in gat
 Observed browser origin:
 
 ```text
-https://openclaw.pm-oci.duckdns.org
+https://<WEB_SERVER_OPENCLAW_DOMAIN>
 ```
 
 Current config had only:
@@ -350,8 +350,8 @@ Updated:
       "allowedOrigins": [
         "http://localhost:18789",
         "http://127.0.0.1:18789",
-        "https://openclaw.pm-oci.duckdns.org",
-        "https://claw3d.pm-oci.duckdns.org"
+        "https://<WEB_SERVER_OPENCLAW_DOMAIN>",
+        "https://<WEB_SERVER_CLAW3D_DOMAIN>"
       ]
     }
   }
@@ -499,25 +499,25 @@ The file summarizes:
 Claw3D web:
 
 ```text
-https://claw3d.pm-oci.duckdns.org
+https://<WEB_SERVER_CLAW3D_DOMAIN>
 ```
 
 OpenClaw Gateway dashboard / Control UI:
 
 ```text
-https://openclaw.pm-oci.duckdns.org
+https://<WEB_SERVER_OPENCLAW_DOMAIN>
 ```
 
 Gateway WebSocket URL:
 
 ```text
-wss://openclaw.pm-oci.duckdns.org
+wss://<WEB_SERVER_OPENCLAW_DOMAIN>
 ```
 
 Nginx Proxy Manager root remains:
 
 ```text
-https://pm-oci.duckdns.org
+https://<WEB_SERVER_DOMAIN>
 ```
 
 ## 19. Useful Verification Commands
@@ -550,7 +550,7 @@ OpenClaw WebSocket check:
 
 ```bash
 cd /home/ubuntu/claw3d
-node -e "const WebSocket=require('./node_modules/ws'); const ws=new WebSocket('ws://172.18.0.1:18789',{origin:'https://openclaw.pm-oci.duckdns.org'}); const t=setTimeout(()=>{console.log('timeout');process.exit(2)},5000); ws.on('open',()=>{console.log('open');clearTimeout(t);ws.close();process.exit(0)}); ws.on('error',e=>{console.log('error',e.message);clearTimeout(t);process.exit(1)});"
+node -e "const WebSocket=require('./node_modules/ws'); const ws=new WebSocket('ws://172.18.0.1:18789',{origin:'https://<WEB_SERVER_OPENCLAW_DOMAIN>'}); const t=setTimeout(()=>{console.log('timeout');process.exit(2)},5000); ws.on('open',()=>{console.log('open');clearTimeout(t);ws.close();process.exit(0)}); ws.on('error',e=>{console.log('error',e.message);clearTimeout(t);process.exit(1)});"
 ```
 
 NPM OpenClaw logs:

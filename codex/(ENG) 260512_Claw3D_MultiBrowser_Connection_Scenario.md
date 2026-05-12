@@ -1,10 +1,10 @@
-# 260512 Claw3D Multi-Browser Connection Scenario
+﻿# 260512 Claw3D Multi-Browser Connection Scenario
 
 This is the new-browser connection scenario based on the current production server state.
 
 ## Current Actual State
 
-Claw3D URL: `https://claw3d.pm-oci.duckdns.org/office`
+Claw3D URL: `https://<WEB_SERVER_CLAW3D_DOMAIN>/office`
 
 Claw3D auth mode: `CLAW3D_GATEWAY_AUTH_MODE=server-device`
 
@@ -23,13 +23,13 @@ server-device storage file: `/home/ubuntu/.openclaw/claw3d/gateway-device-auth.j
 Open Claw3D in the new browser with the access token included in the URL.
 
 ```text
-https://claw3d.pm-oci.duckdns.org/office?token=<STUDIO_ACCESS_TOKEN>
+https://<WEB_SERVER_CLAW3D_DOMAIN>/office?token=<STUDIO_ACCESS_TOKEN>
 ```
 
 Check the `<STUDIO_ACCESS_TOKEN>` value on the server with the command below. It is better not to expose this value in chat.
 
 ```bash
-ssh ubuntu@pm-oci.duckdns.org "cd /home/ubuntu/claw3d && sed -n 's/^STUDIO_ACCESS_TOKEN=//p' .env"
+ssh ubuntu@<WEB_SERVER_DOMAIN> "cd /home/ubuntu/claw3d && sed -n 's/^STUDIO_ACCESS_TOKEN=//p' .env"
 ```
 
 If authentication succeeds, Claw3D sets the `studio_access` cookie, removes the `token` parameter from the URL, and redirects to `/office`.
@@ -46,7 +46,7 @@ When working normally, server logs should look roughly like this.
 ## Verification Command
 
 ```bash
-ssh ubuntu@pm-oci.duckdns.org "journalctl --user -u claw3d.service -n 30 --no-pager"
+ssh ubuntu@<WEB_SERVER_DOMAIN> "journalctl --user -u claw3d.service -n 30 --no-pager"
 ```
 
 ## Troubleshooting

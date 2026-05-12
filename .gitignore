@@ -35,6 +35,7 @@ id_rsa
 id_rsa.pub
 id_ed25519
 id_ed25519.pub
+.ssh_known_hosts_pm_oci
 
 # debug
 npm-debug.log*
@@ -43,6 +44,7 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
+.env
 .env*
 !.env.example
 

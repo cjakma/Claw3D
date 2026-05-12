@@ -1,9 +1,9 @@
-
+﻿
 현재 운영 서버 기준 신규 브라우저 접속 시나리오는 이렇게 됩니다.
 
 현재 실제 상태
 
-Claw3D URL: https://claw3d.pm-oci.duckdns.org/office
+Claw3D URL: https://<WEB_SERVER_CLAW3D_DOMAIN>/office
 Claw3D 인증 모드: CLAW3D_GATEWAY_AUTH_MODE=server-device
 Claw3D access cookie 이름: studio_access
 STUDIO_ACCESS_TOKEN: 서버 .env에 있음, 길이 26자
@@ -13,10 +13,10 @@ server-device 저장 파일: /home/ubuntu/.openclaw/claw3d/gateway-device-auth.j
 신규 브라우저 접속 절차
 
 새 브라우저에서 Claw3D access token 포함 URL로 접속합니다.
-https://claw3d.pm-oci.duckdns.org/office?token=<STUDIO_ACCESS_TOKEN>
+https://<WEB_SERVER_CLAW3D_DOMAIN>/office?token=<STUDIO_ACCESS_TOKEN>
 <STUDIO_ACCESS_TOKEN> 값은 서버에서 아래 명령으로 확인하세요. 채팅에는 노출하지 않는 게 좋습니다.
 
-ssh ubuntu@pm-oci.duckdns.org "cd /home/ubuntu/claw3d && sed -n 's/^STUDIO_ACCESS_TOKEN=//p' .env"
+ssh ubuntu@<WEB_SERVER_DOMAIN> "cd /home/ubuntu/claw3d && sed -n 's/^STUDIO_ACCESS_TOKEN=//p' .env"
 정상 인증되면 Claw3D가 studio_access 쿠키를 심고, URL에서 token 파라미터를 제거한 뒤 /office로 redirect합니다.
 
 이후 새 브라우저는 별도 OpenClaw device pairing 없이 Claw3D UI를 사용합니다. 브라우저 자체 device identity가 아니라 Claw3D 서버 device가 upstream OpenClaw Gateway에 연결합니다.
@@ -27,7 +27,7 @@ ssh ubuntu@pm-oci.duckdns.org "cd /home/ubuntu/claw3d && sed -n 's/^STUDIO_ACCES
 [gateway-device-auth] connect device=8bc0485c388d auth=device-token
 확인 명령
 
-ssh ubuntu@pm-oci.duckdns.org "journalctl --user -u claw3d.service -n 30 --no-pager"
+ssh ubuntu@<WEB_SERVER_DOMAIN> "journalctl --user -u claw3d.service -n 30 --no-pager"
 문제별 대응
 
 Studio access token required가 나오면: 

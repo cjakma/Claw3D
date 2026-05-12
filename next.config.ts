@@ -1,5 +1,43 @@
 import type { NextConfig } from "next";
 
+const splitCsv = (value: string | undefined) =>
+  (value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const normalizeAllowedDevOrigin = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.host;
+  } catch {
+    return trimmed.replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+  }
+};
+
+const unique = (values: string[]) => Array.from(new Set(values.filter(Boolean)));
+
+const buildAllowedDevOrigins = () => {
+  const configuredOrigins = splitCsv(process.env.CLAW3D_ALLOWED_DEV_ORIGINS).map(
+    normalizeAllowedDevOrigin
+  );
+  const webServerDomain = (
+    process.env.WEB_SERVER_DOMAIN ||
+    process.env.WEB_SERVER_DOAMIN ||
+    ""
+  )
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/.*$/, "");
+
+  return unique([
+    ...configuredOrigins,
+    ...(webServerDomain ? [`claw3d.${webServerDomain}`, `openclaw.${webServerDomain}`] : []),
+  ]);
+};
+
 const securityHeaders = [
   {
     key: "Content-Security-Policy",
@@ -48,10 +86,7 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: [
-    "claw3d.pm-oci.duckdns.org",
-    "openclaw.pm-oci.duckdns.org",
-  ],
+  allowedDevOrigins: buildAllowedDevOrigins(),
   async headers() {
     return [
       {

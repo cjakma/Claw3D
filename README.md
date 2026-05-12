@@ -247,6 +247,8 @@ Important runtime paths:
 Common environment variables:
 
 - `HOST` and `PORT` control the Studio server bind address and port.
+- `WEB_SERVER_DOMAIN` is the base public domain used to derive Next.js development origins such as `claw3d.<domain>` and `openclaw.<domain>`.
+- `CLAW3D_ALLOWED_DEV_ORIGINS` optionally adds or overrides comma-separated Next.js development origins directly.
 - `STUDIO_ACCESS_TOKEN` protects Studio when binding to a public host.
 - `UPSTREAM_ALLOWLIST` restricts which upstream gateway hosts Studio may proxy to. Set this in production.
 - `CUSTOM_RUNTIME_ALLOWLIST` restricts which hosts `/api/runtime/custom` may fetch. If unset, it falls back to `UPSTREAM_ALLOWLIST`.

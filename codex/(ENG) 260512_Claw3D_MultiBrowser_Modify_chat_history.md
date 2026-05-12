@@ -1,4 +1,4 @@
-# 260512 Claw3D Multi-Browser Modify Chat History
+﻿# 260512 Claw3D Multi-Browser Modify Chat History
 
 > Note: This file records the working thread in a sanitized form. Personal/local credential paths, such as the SSH private key path, are redacted because this file is stored inside the repository.
 
@@ -18,12 +18,12 @@ Important repository constraints:
 
 The user provided:
 
-- SSH protocol and host: `pm-oci.duckdns.org`
+- SSH protocol and host: `<WEB_SERVER_DOMAIN>`
 - SSH user: `ubuntu`
 - SSH key path: `[redacted local private key path]`
 - Relevant remote directories: `/home/ubuntu`, `/home/ubuntu/claw3d`
-- OpenClaw URL: `https://openclaw.pm-oci.duckdns.org/chat?session=agent%3Amain%3Amain`
-- Claw3D URL: `https://claw3d.pm-oci.duckdns.org/office`
+- OpenClaw URL: `https://<WEB_SERVER_OPENCLAW_DOMAIN>/chat?session=agent%3Amain%3Amain`
+- Claw3D URL: `https://<WEB_SERVER_CLAW3D_DOMAIN>/office`
 
 The user stated both URLs were reachable, but Claw3D appeared to allow access only from the single browser that had already completed authentication. They asked for code analysis under `/home/ubuntu/claw3d` to allow the same user to access Claw3D from multiple browsers. They wanted minimal extra parameters, ideally around one parameter. They also provided the intended `params.device` shape:
 

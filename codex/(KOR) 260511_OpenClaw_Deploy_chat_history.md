@@ -1,4 +1,4 @@
-# 2026-05-11 OpenClaw / Claw3D 배포 채팅 기록
+﻿# 2026-05-11 OpenClaw / Claw3D 배포 채팅 기록
 
 > 참고: 이 파일은 배포 및 디버깅 스레드에서 오간 대화와 작업을 요약한 문서입니다.  
 > 개인 키 경로, passphrase, access token, gateway token 같은 민감 값은 의도적으로 제거했습니다.
@@ -26,7 +26,7 @@
 
 ```text
 WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!
-Host key for pm-oci.duckdns.org has changed
+Host key for <WEB_SERVER_DOMAIN> has changed
 ```
 
 SSH가 표시한 새 ED25519 fingerprint:
@@ -190,21 +190,21 @@ Portainer 바인딩 포트:
 
 존재하던 NPM proxy hosts:
 
-- `pm-oci.duckdns.org`
-- `portainer.pm-oci.duckdns.org`
-- `openclaw.pm-oci.duckdns.org`
-- `claw3d.pm-oci.duckdns.org`
+- `<WEB_SERVER_DOMAIN>`
+- `portainer.<WEB_SERVER_DOMAIN>`
+- `<WEB_SERVER_OPENCLAW_DOMAIN>`
+- `<WEB_SERVER_CLAW3D_DOMAIN>`
 
 사용자 확인 사항:
 
-- `pm-oci.duckdns.org`는 계속 Nginx Proxy Manager를 가리켜야 한다.
-- `openclaw.pm-oci.duckdns.org`는 직접 `:18789` 대신 사용한다.
-- `claw3d.pm-oci.duckdns.org`는 직접 `:3000` 대신 사용한다.
+- `<WEB_SERVER_DOMAIN>`는 계속 Nginx Proxy Manager를 가리켜야 한다.
+- `<WEB_SERVER_OPENCLAW_DOMAIN>`는 직접 `:18789` 대신 사용한다.
+- `<WEB_SERVER_CLAW3D_DOMAIN>`는 직접 `:3000` 대신 사용한다.
 
 root domain은 NPM으로 확인 및 복구했다.
 
 ```text
-pm-oci.duckdns.org -> nginxproxymanager:81
+<WEB_SERVER_DOMAIN> -> nginxproxymanager:81
 ```
 
 ## 10. Docker Host Gateway 조사
@@ -238,8 +238,8 @@ Docker host gateway를 사용한다.
 NPM upstream targets:
 
 ```text
-openclaw.pm-oci.duckdns.org -> http://172.18.0.1:18789
-claw3d.pm-oci.duckdns.org   -> http://172.18.0.1:3000
+<WEB_SERVER_OPENCLAW_DOMAIN> -> http://172.18.0.1:18789
+<WEB_SERVER_CLAW3D_DOMAIN>   -> http://172.18.0.1:3000
 ```
 
 ## 11. UFW와 Port 공개 논의
@@ -327,7 +327,7 @@ origin not allowed (open the Control UI from the gateway host or allow it in gat
 관찰된 browser origin:
 
 ```text
-https://openclaw.pm-oci.duckdns.org
+https://<WEB_SERVER_OPENCLAW_DOMAIN>
 ```
 
 기존 config에는 다음만 있었다.
@@ -348,8 +348,8 @@ https://openclaw.pm-oci.duckdns.org
       "allowedOrigins": [
         "http://localhost:18789",
         "http://127.0.0.1:18789",
-        "https://openclaw.pm-oci.duckdns.org",
-        "https://claw3d.pm-oci.duckdns.org"
+        "https://<WEB_SERVER_OPENCLAW_DOMAIN>",
+        "https://<WEB_SERVER_CLAW3D_DOMAIN>"
       ]
     }
   }
@@ -497,25 +497,25 @@ C:\env\workspace\260417_Claw3D_cjakma\260511_update.md
 Claw3D web:
 
 ```text
-https://claw3d.pm-oci.duckdns.org
+https://<WEB_SERVER_CLAW3D_DOMAIN>
 ```
 
 OpenClaw Gateway dashboard / Control UI:
 
 ```text
-https://openclaw.pm-oci.duckdns.org
+https://<WEB_SERVER_OPENCLAW_DOMAIN>
 ```
 
 Gateway WebSocket URL:
 
 ```text
-wss://openclaw.pm-oci.duckdns.org
+wss://<WEB_SERVER_OPENCLAW_DOMAIN>
 ```
 
 Nginx Proxy Manager root:
 
 ```text
-https://pm-oci.duckdns.org
+https://<WEB_SERVER_DOMAIN>
 ```
 
 ## 19. Useful Verification Commands
@@ -548,7 +548,7 @@ OpenClaw WebSocket check:
 
 ```bash
 cd /home/ubuntu/claw3d
-node -e "const WebSocket=require('./node_modules/ws'); const ws=new WebSocket('ws://172.18.0.1:18789',{origin:'https://openclaw.pm-oci.duckdns.org'}); const t=setTimeout(()=>{console.log('timeout');process.exit(2)},5000); ws.on('open',()=>{console.log('open');clearTimeout(t);ws.close();process.exit(0)}); ws.on('error',e=>{console.log('error',e.message);clearTimeout(t);process.exit(1)});"
+node -e "const WebSocket=require('./node_modules/ws'); const ws=new WebSocket('ws://172.18.0.1:18789',{origin:'https://<WEB_SERVER_OPENCLAW_DOMAIN>'}); const t=setTimeout(()=>{console.log('timeout');process.exit(2)},5000); ws.on('open',()=>{console.log('open');clearTimeout(t);ws.close();process.exit(0)}); ws.on('error',e=>{console.log('error',e.message);clearTimeout(t);process.exit(1)});"
 ```
 
 NPM OpenClaw logs:

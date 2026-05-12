@@ -1,8 +1,8 @@
-# 2026-05-11 OpenClaw / Claw3D Deployment and Connection Summary
+﻿# 2026-05-11 OpenClaw / Claw3D Deployment and Connection Summary
 
 ## Server Access Information
 
-- SSH host: `pm-oci.duckdns.org`
+- SSH host: `<WEB_SERVER_DOMAIN>`
 - SSH user: `ubuntu`
 - SSH port: `22`
 - Claw3D project path: `/home/ubuntu/claw3d`
@@ -16,19 +16,19 @@ However, UFW may contain rules for `22`, `80`, `81`, `443`, `3000`, and `18789`,
 
 ```text
 Windows/browser
-  -> https://openclaw.pm-oci.duckdns.org
+  -> https://<WEB_SERVER_OPENCLAW_DOMAIN>
   -> Nginx Proxy Manager :443
   -> Docker host gateway 172.18.0.1:18789
   -> Ubuntu native OpenClaw Gateway
 
 Windows/browser
-  -> https://claw3d.pm-oci.duckdns.org
+  -> https://<WEB_SERVER_CLAW3D_DOMAIN>
   -> Nginx Proxy Manager :443
   -> Docker host gateway 172.18.0.1:3000
   -> Ubuntu native Claw3D
 ```
 
-The base address `pm-oci.duckdns.org` remains pointed at Nginx Proxy Manager.
+The base address `<WEB_SERVER_DOMAIN>` remains pointed at Nginx Proxy Manager.
 
 ## Docker Host Gateway Check
 
@@ -54,13 +54,13 @@ Therefore, NPM upstreams should use `172.18.0.1`, not `host.docker.internal`.
 
 Based on the NPM proxy host DB and generated conf files, the following settings were confirmed.
 
-- `pm-oci.duckdns.org`
+- `<WEB_SERVER_DOMAIN>`
   - upstream: `http://nginxproxymanager:81`
   - purpose: keep the Nginx Proxy Manager UI available
-- `openclaw.pm-oci.duckdns.org`
+- `<WEB_SERVER_OPENCLAW_DOMAIN>`
   - upstream: `http://172.18.0.1:18789`
   - purpose: OpenClaw Gateway
-- `claw3d.pm-oci.duckdns.org`
+- `<WEB_SERVER_CLAW3D_DOMAIN>`
   - upstream: `http://172.18.0.1:3000`
   - purpose: Claw3D web
 
@@ -122,7 +122,7 @@ Applied core settings:
 - Listen: `0.0.0.0:18789`
 - Internal direct URL: `ws://127.0.0.1:18789`
 - NPM upstream URL: `http://172.18.0.1:18789`
-- External WebSocket URL: `wss://openclaw.pm-oci.duckdns.org`
+- External WebSocket URL: `wss://<WEB_SERVER_OPENCLAW_DOMAIN>`
 
 The following value should be kept in `/home/ubuntu/.openclaw/openclaw.json`.
 
@@ -134,15 +134,15 @@ The following value should be kept in `/home/ubuntu/.openclaw/openclaw.json`.
       "allowedOrigins": [
         "http://localhost:18789",
         "http://127.0.0.1:18789",
-        "https://openclaw.pm-oci.duckdns.org",
-        "https://claw3d.pm-oci.duckdns.org"
+        "https://<WEB_SERVER_OPENCLAW_DOMAIN>",
+        "https://<WEB_SERVER_CLAW3D_DOMAIN>"
       ]
     }
   }
 }
 ```
 
-The `origin not allowed` error was fixed by adding `https://openclaw.pm-oci.duckdns.org` to `allowedOrigins` and restarting the Gateway.
+The `origin not allowed` error was fixed by adding `https://<WEB_SERVER_OPENCLAW_DOMAIN>` to `allowedOrigins` and restarting the Gateway.
 
 ## OpenClaw systemd Unit Adjustment
 
@@ -258,7 +258,7 @@ Internal WebSocket verification:
 
 ```bash
 cd /home/ubuntu/claw3d
-node -e "const WebSocket=require('./node_modules/ws'); const ws=new WebSocket('ws://172.18.0.1:18789',{origin:'https://openclaw.pm-oci.duckdns.org'}); const t=setTimeout(()=>{console.log('timeout');process.exit(2)},5000); ws.on('open',()=>{console.log('open');clearTimeout(t);ws.close();process.exit(0)}); ws.on('error',e=>{console.log('error',e.message);clearTimeout(t);process.exit(1)});"
+node -e "const WebSocket=require('./node_modules/ws'); const ws=new WebSocket('ws://172.18.0.1:18789',{origin:'https://<WEB_SERVER_OPENCLAW_DOMAIN>'}); const t=setTimeout(()=>{console.log('timeout');process.exit(2)},5000); ws.on('open',()=>{console.log('open');clearTimeout(t);ws.close();process.exit(0)}); ws.on('error',e=>{console.log('error',e.message);clearTimeout(t);process.exit(1)});"
 ```
 
 Expected output:
@@ -272,19 +272,19 @@ open
 Claw3D web:
 
 ```text
-https://claw3d.pm-oci.duckdns.org
+https://<WEB_SERVER_CLAW3D_DOMAIN>
 ```
 
 OpenClaw Gateway dashboard / Control UI:
 
 ```text
-https://openclaw.pm-oci.duckdns.org
+https://<WEB_SERVER_OPENCLAW_DOMAIN>
 ```
 
 Gateway URL used by Claw3D or WebSocket clients:
 
 ```text
-wss://openclaw.pm-oci.duckdns.org
+wss://<WEB_SERVER_OPENCLAW_DOMAIN>
 ```
 
 ## Reference Log Commands
