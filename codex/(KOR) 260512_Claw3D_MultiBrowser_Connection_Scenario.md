@@ -6,7 +6,7 @@
 Claw3D URL: https://claw3d.pm-oci.duckdns.org/office
 Claw3D 인증 모드: CLAW3D_GATEWAY_AUTH_MODE=server-device
 Claw3D access cookie 이름: studio_access
-STUDIO_ACCESS_TOKEN: 서버 .env에 있음, 길이 26자 (!dmstlfdlskavus9421google)
+STUDIO_ACCESS_TOKEN: 서버 .env에 있음, 길이 26자
 Claw3D server-device id: 8bc0485c388d76bb43a6a09139f5a738fa9b01feee37c45ef938272a98d6849c
 server-device token scope: ws://localhost:18789::operator
 server-device 저장 파일: /home/ubuntu/.openclaw/claw3d/gateway-device-auth.json
@@ -14,7 +14,6 @@ server-device 저장 파일: /home/ubuntu/.openclaw/claw3d/gateway-device-auth.j
 
 새 브라우저에서 Claw3D access token 포함 URL로 접속합니다.
 https://claw3d.pm-oci.duckdns.org/office?token=<STUDIO_ACCESS_TOKEN>
-https://claw3d.pm-oci.duckdns.org/office?token=!dmstlfdlskavus9421google
 <STUDIO_ACCESS_TOKEN> 값은 서버에서 아래 명령으로 확인하세요. 채팅에는 노출하지 않는 게 좋습니다.
 
 ssh ubuntu@pm-oci.duckdns.org "cd /home/ubuntu/claw3d && sed -n 's/^STUDIO_ACCESS_TOKEN=//p' .env"
