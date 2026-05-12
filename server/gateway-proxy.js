@@ -1,4 +1,5 @@
 const { Buffer } = require("node:buffer");
+const { randomUUID } = require("node:crypto");
 const { WebSocket, WebSocketServer } = require("ws");
 
 const DEFAULT_UPSTREAM_HANDSHAKE_TIMEOUT_MS = 10_000;
@@ -152,6 +153,8 @@ function createGatewayProxy(options) {
     log = () => {},
     logError = (msg, err) => console.error(msg, err),
     upstreamHandshakeTimeoutMs = DEFAULT_UPSTREAM_HANDSHAKE_TIMEOUT_MS,
+    gatewayAuthMode = "browser",
+    serverDeviceAuth = null,
   } = options || {};
 
   const { verifyClient } = options || {};
@@ -171,6 +174,11 @@ function createGatewayProxy(options) {
     let connectRequestId = null;
     let connectResponseSent = false;
     let pendingConnectFrame = null;
+    let activeServerDeviceConnectFrame = null;
+    let upstreamConnectRequestId = null;
+    let upstreamConnectAuthSource = null;
+    let upstreamConnectRetriedWithSharedToken = false;
+    let upstreamConnectNonce = null;
     let pendingUpstreamSetupError = null;
     let closed = false;
     const frameRateLimiter = createFrameRateLimiter();
@@ -205,7 +213,82 @@ function createGatewayProxy(options) {
       closeBoth(1011, "connect failed");
     };
 
+    const useServerDeviceAuth = () =>
+      gatewayAuthMode === "server-device" &&
+      upstreamAdapterType === "openclaw" &&
+      serverDeviceAuth &&
+      typeof serverDeviceAuth.buildConnectFrame === "function";
+
+    const isConnectChallenge = (frame) =>
+      frame &&
+      isObject(frame) &&
+      frame.type === "event" &&
+      frame.event === "connect.challenge" &&
+      isObject(frame.payload) &&
+      typeof frame.payload.nonce === "string" &&
+      frame.payload.nonce.trim().length > 0;
+
+    const isDeviceTokenRejected = (frame) => {
+      if (!frame || !isObject(frame) || frame.ok !== false || !isObject(frame.error)) {
+        return false;
+      }
+      const error = frame.error;
+      const code = typeof error.code === "string" ? error.code.toLowerCase() : "";
+      const message = typeof error.message === "string" ? error.message.toLowerCase() : "";
+      const details = isObject(error.details) ? error.details : null;
+      const detailCode = typeof details?.code === "string" ? details.code.toLowerCase() : "";
+      const authReason =
+        typeof details?.authReason === "string" ? details.authReason.toLowerCase() : "";
+      return (
+        code.includes("unauthorized") ||
+        detailCode.includes("device_token") ||
+        authReason.includes("device_token") ||
+        message.includes("device token")
+      );
+    };
+
+    const sendServerDeviceConnectFrame = (browserFrame) => {
+      if (!upstreamReady || upstreamWs?.readyState !== WebSocket.OPEN) {
+        pendingConnectFrame = browserFrame;
+        return;
+      }
+      if (!upstreamConnectNonce) {
+        pendingConnectFrame = browserFrame;
+        return;
+      }
+      if (upstreamConnectRequestId && !connectResponseSent) {
+        return;
+      }
+      activeServerDeviceConnectFrame = browserFrame;
+      const upstreamId = randomUUID();
+      let built;
+      try {
+        built = serverDeviceAuth.buildConnectFrame({
+          id: upstreamId,
+          upstreamUrl,
+          upstreamToken,
+          nonce: upstreamConnectNonce,
+          clientVersion: process.env.npm_package_version || "claw3d-server",
+        });
+      } catch (err) {
+        logError("Failed to build server device gateway connect frame.", err);
+        sendConnectError(
+          "studio.server_device_auth_failed",
+          "Failed to create Claw3D server device authentication."
+        );
+        return;
+      }
+      upstreamConnectRequestId = upstreamId;
+      upstreamConnectAuthSource = built.authSource || null;
+      upstreamWs.send(JSON.stringify(built.frame));
+    };
+
     const forwardConnectFrame = (frame) => {
+      if (useServerDeviceAuth()) {
+        sendServerDeviceConnectFrame(frame);
+        return;
+      }
+
       const browserHasAuth =
         hasNonEmptyToken(frame.params) ||
         hasNonEmptyPassword(frame.params) ||
@@ -314,6 +397,63 @@ function createGatewayProxy(options) {
 
       upstreamWs.on("message", (upRaw) => {
         const upParsed = safeJsonParse(String(upRaw ?? ""));
+        if (useServerDeviceAuth() && isConnectChallenge(upParsed)) {
+          upstreamConnectNonce = upParsed.payload.nonce.trim();
+          maybeForwardPendingConnect();
+          return;
+        }
+        if (
+          useServerDeviceAuth() &&
+          upParsed &&
+          isObject(upParsed) &&
+          upParsed.type === "res" &&
+          upstreamConnectRequestId &&
+          upParsed.id === upstreamConnectRequestId
+        ) {
+          if (
+            upParsed.ok === false &&
+            upstreamConnectAuthSource === "device-token" &&
+            !upstreamConnectRetriedWithSharedToken &&
+            upstreamToken &&
+            isDeviceTokenRejected(upParsed) &&
+            activeServerDeviceConnectFrame
+          ) {
+            upstreamConnectRetriedWithSharedToken = true;
+            upstreamConnectRequestId = null;
+            upstreamConnectAuthSource = null;
+            try {
+              if (typeof serverDeviceAuth.clearToken === "function") {
+                serverDeviceAuth.clearToken({ scope: upstreamUrl, role: "operator" });
+              }
+            } catch (err) {
+              logError("Failed to clear rejected server device token.", err);
+            }
+            sendServerDeviceConnectFrame(activeServerDeviceConnectFrame);
+            return;
+          }
+
+          connectResponseSent = true;
+          upstreamConnectRequestId = null;
+          upstreamConnectAuthSource = null;
+          upstreamConnectRetriedWithSharedToken = false;
+          if (upParsed.ok && isObject(upParsed.payload)) {
+            try {
+              if (typeof serverDeviceAuth.storeHelloAuth === "function") {
+                serverDeviceAuth.storeHelloAuth({
+                  upstreamUrl,
+                  auth: upParsed.payload.auth,
+                });
+              }
+            } catch (err) {
+              logError("Failed to store server device gateway token.", err);
+            }
+          }
+          sendToBrowser({
+            ...upParsed,
+            id: connectRequestId || upParsed.id,
+          });
+          return;
+        }
         if (upParsed && isObject(upParsed) && upParsed.type === "res") {
           const resId = typeof upParsed.id === "string" ? upParsed.id : "";
           if (resId && connectRequestId && resId === connectRequestId) {

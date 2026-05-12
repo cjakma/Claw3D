@@ -27,6 +27,7 @@ const path = require("node:path");
 });
 
 const { createAccessGate } = require("./access-gate");
+const { createGatewayDeviceAuth } = require("./gateway-device-auth");
 const { createGatewayProxy } = require("./gateway-proxy");
 const { assertPublicHostAllowed, resolveHosts } = require("./network-policy");
 const { loadUpstreamGatewaySettings } = require("./studio-settings");
@@ -42,6 +43,11 @@ const resolvePathname = (url) => {
   const raw = typeof url === "string" ? url : "";
   const idx = raw.indexOf("?");
   return (idx === -1 ? raw : raw.slice(0, idx)) || "/";
+};
+
+const resolveGatewayAuthMode = () => {
+  const raw = (process.env.CLAW3D_GATEWAY_AUTH_MODE || "").trim().toLowerCase();
+  return raw === "server-device" ? "server-device" : "browser";
 };
 
 const CERT_DIR = require("node:path").join(__dirname, "..", ".certs");
@@ -111,6 +117,18 @@ async function main() {
   const accessGate = createAccessGate({
     token: process.env.STUDIO_ACCESS_TOKEN,
   });
+  const gatewayAuthMode = resolveGatewayAuthMode();
+  const serverDeviceAuth =
+    gatewayAuthMode === "server-device"
+      ? createGatewayDeviceAuth({
+          log: (message) => console.info(message),
+        })
+      : null;
+  if (serverDeviceAuth) {
+    console.info(
+      `Gateway auth mode: server-device (state: ${serverDeviceAuth.storePath})`
+    );
+  }
 
   const proxy = createGatewayProxy({
     loadUpstreamSettings: async () => {
@@ -124,6 +142,8 @@ async function main() {
       return true;
     },
     verifyClient: (info) => accessGate.allowUpgrade(info.req),
+    gatewayAuthMode,
+    serverDeviceAuth,
   });
 
   await app.prepare();
