@@ -70,6 +70,7 @@ The current app already includes a substantial Claw3D surface:
 - Immersive operational spaces for standups, GitHub review flows, analytics, and system monitoring.
 - Local Studio persistence for gateway connection details, focused-agent preferences, desk assignments, office state, and related UI settings.
 - A custom same-origin WebSocket proxy so the browser talks to Studio, and Studio talks to the upstream OpenClaw Gateway.
+- Multi-browser OpenClaw access through `CLAW3D_GATEWAY_AUTH_MODE=server-device`, so more than one browser can use the same Claw3D Studio without each browser becoming a separate OpenClaw device.
 
 ## Quick Start
 
@@ -179,6 +180,14 @@ That means `ws://localhost:18789` always refers to the gateway reachable from th
 
 This design keeps gateway settings persisted on the Studio host and lets Studio open the upstream connection server-side. The current UI still loads the configured upstream URL/token into browser memory at runtime, so treat the browser as part of the active trust boundary.
 
+### Multi-browser OpenClaw mode
+
+Claw3D can run beyond a single localhost browser. When `CLAW3D_GATEWAY_AUTH_MODE=server-device` is enabled, Studio acts as the persistent OpenClaw Gateway device on behalf of connected browsers. Each browser still authenticates to Claw3D through the Studio access gate, but upstream OpenClaw sees the Claw3D server device instead of a new browser-local device identity each time.
+
+This is useful for LAN, Tailscale, reverse-proxy, and remote Studio deployments where the same user wants to open Claw3D from multiple browsers or machines. The browser connects to Claw3D at `/office`; Claw3D connects upstream to OpenClaw from the server side.
+
+![Claw3D running from multiple browsers with OpenClaw connected](assets/claw3d-multibrowser-openclaw-connected.png)
+
 ## Common Setups
 
 ### Gateway local, Studio local
@@ -212,8 +221,9 @@ Alternative with SSH:
 
 1. Start Studio with `HOST=0.0.0.0` (or a specific LAN/Tailscale host).
 2. Set `STUDIO_ACCESS_TOKEN` before exposing Studio beyond localhost.
-3. Open Claw3D from the LAN/Tailscale address instead of `localhost`.
-4. If you are connecting to a remote OpenClaw gateway, remember device approval is per browser/device. A new browser may still require:
+3. For multi-browser OpenClaw access, set `CLAW3D_GATEWAY_AUTH_MODE=server-device` and configure `CLAW3D_GATEWAY_URL` / `CLAW3D_GATEWAY_TOKEN` on the Studio host.
+4. Open Claw3D from the LAN/Tailscale address instead of `localhost`.
+5. In browser-auth mode, OpenClaw device approval is still per browser/device. In server-device mode, approval is only needed if the Claw3D server device is new or has been regenerated:
 
 ```bash
 openclaw devices approve --latest
@@ -243,6 +253,7 @@ Common environment variables:
 - `NEXT_PUBLIC_GATEWAY_URL` provides the default upstream gateway URL when Studio settings are empty. **Note:** this is a build-time variable — changes require `npm run build` to take effect.
 - `CLAW3D_GATEWAY_URL` and `CLAW3D_GATEWAY_TOKEN` provide a runtime alternative to `NEXT_PUBLIC_GATEWAY_URL` that takes effect on server restart without a rebuild.
 - `CLAW3D_GATEWAY_ADAPTER_TYPE` can pair with `CLAW3D_GATEWAY_URL` to mark those runtime defaults as `openclaw`, `hermes`, `demo`, or `custom`.
+- `CLAW3D_GATEWAY_AUTH_MODE=server-device` makes the Studio server authenticate upstream to OpenClaw as one persistent device, which supports multi-browser Claw3D access without pairing every browser separately. Leave unset for the browser-auth flow.
 - If `CLAW3D_GATEWAY_URL` is not set, Studio can still surface local Hermes or demo adapter defaults from `HERMES_ADAPTER_PORT` / `DEMO_ADAPTER_PORT`.
 - OpenClaw file defaults still come from `~/.openclaw/openclaw.json` when present.
 - `OPENCLAW_STATE_DIR` and `OPENCLAW_CONFIG_PATH` override the default OpenClaw paths.
