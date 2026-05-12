@@ -32,9 +32,9 @@ params: {
   device: {
     id: "...",          // public key fingerprint
     publicKey: "...",   // Ed25519 public key
-    signature: "...",   // private key로 connect payload 서명
+    signature: "...",   // connect payload signed with the private key
     signedAt: 123456,
-    nonce: "..."        // gateway가 challenge를 보냈으면 포함
+    nonce: "..."        // included when the gateway sends a challenge
   }
 }
 ```
